@@ -1469,3 +1469,103 @@ void dgemm(int m, int n, int k, double *A, double *B, double *C)
 {
     cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, m, n, k, 1, A, m, B, k, 0, C, m);
 }
+
+/* ========================================hash map========================================================== */
+/* calculate the hash value */
+static unsigned int hash(const char *key, int size)
+{
+    unsigned int h;
+    unsigned char *p;
+    h = 0;
+    for (p = (unsigned char *)key; *p != '\0'; p++)
+    {
+        h = h * 31 + (int)(*p);
+    }
+    return (h % size);
+}
+/* create hash node */
+static void node_creat(HashTable table, char *key, char *val)
+{
+    HashNode node = (HashNode)alloc1(1, sizeof(struct HashNode));
+    node->key = key;
+    node->value = val;
+    node->next = NULL;
+    int h = hash(key, table->size);
+    node->next = table->table[h];
+    table->table[h] = node;
+} /* find the node that contains the key */
+static HashNode hash_find(HashTable table, char *key)
+{
+    int h = hash(key, table->size);
+    HashNode node = table->table[h];
+    while (node != NULL)
+    {
+        if (strcmp(node->key, key) == 0)
+            break;
+        node = node->next;
+    }
+    return node;
+}
+/* create hash map */
+HashTable hash_creat(int size)
+{
+    HashTable table = (HashTable)alloc1(1, sizeof(struct HashTable));
+    table->size = size;
+    table->table = (HashNode *)alloc1(size, sizeof(HashNode));
+    for (int i = 0; i < size; i++)
+    {
+        table->table[i] = NULL;
+    }
+    return table;
+}
+
+void hash_add(HashTable table, char *s /* key=value */)
+{
+    char *key, *value;
+    const char *p = strchr(s, '=');
+    if (p == NULL)
+        return;
+    size_t leftLen = p - s;
+    size_t rightLen = strlen(p + 1);
+    key = alloc1char(leftLen);
+    strncpy(key, s, leftLen);
+    key[leftLen] = '\0';
+
+    HashNode e = hash_find(table, key);
+    if (e != NULL)
+    {
+        if (strcmp(p + 1, e->value) != 0)
+        {
+            value = alloc1char(rightLen);
+            strcpy(value, p + 1);
+            free(e->value);
+            e->value = value;
+        }
+        free1(key);
+    }
+    else
+    {
+        value = alloc1char(rightLen);
+        strcpy(value, p + 1);
+        node_creat(table, key, value);
+    }
+}
+void hash_close(HashTable tab)
+{
+    int n = tab->size;
+    HashNode e, nt;
+    for (int i = 0; i < n; i++)
+    {
+        e = tab->table[i];
+        while (e != NULL)
+        {
+            nt = e->next;
+            free(e->key);
+            free(e->value);
+            free(e);
+            e = nt;
+        }
+    }
+    free(tab->table);
+    free(tab);
+}

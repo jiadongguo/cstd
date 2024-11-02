@@ -206,4 +206,22 @@ void saxpy(int n, float alpha, float *a, float *b);
 /* blas3 */
 void sgemm(int m, int n, int k, float *A, float *B, float *C);
 void dgemm(int m, int n, int k, double *A, double *B, double *C);
+
+/* hash map */
+typedef struct HashNode
+{
+    char *key;
+    char *value;
+    struct HashNode *next;
+} *HashNode;
+
+typedef struct HashTable
+{
+    HashNode *table;
+    int size;
+} *HashTable;
+HashTable hash_creat(int size);
+void hash_add(HashTable table, char *s /* key=value */);
+void hash_close(HashTable tab);
+
 #endif
