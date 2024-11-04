@@ -71,71 +71,39 @@ typedef float (*opt_fg)(float *x, float *g);
 void *alloc1(size_t n1, size_t size);
 void *realloc1(void *v, size_t n1, size_t size);
 void **alloc2(size_t n1, size_t n2, size_t size);
-void ***alloc3(size_t n1, size_t n2, size_t n3, size_t size);
-void ****alloc4(size_t n1, size_t n2, size_t n3, size_t n4, size_t size);
-void *****alloc5(size_t n1, size_t n2, size_t n3, size_t n4, size_t n5, size_t size);
-void ******alloc6(size_t n1, size_t n2, size_t n3, size_t n4, size_t n5, size_t n6,
-                  size_t size);
+
 void free1(void *p);
 void free2(void **p);
-void free3(void ***p);
-void free4(void ****p);
-void free5(void *****p);
-void free6(void ******p);
 
 int *alloc1int(size_t n1);
 int *realloc1int(int *v, size_t n1);
 int **alloc2int(size_t n1, size_t n2);
-int ***alloc3int(size_t n1, size_t n2, size_t n3);
-int ****alloc4int(size_t n1, size_t n2, size_t n3, size_t n4);
-int *****alloc5int(size_t n1, size_t n2, size_t n3, size_t n4, size_t n5);
 void free1int(int *p);
 void free2int(int **p);
-void free3int(int ***p);
-void free4int(int ****p);
-void free5int(int *****p);
 
 float *alloc1float(size_t n1);
 float *realloc1float(float *v, size_t n1);
 float **alloc2float(size_t n1, size_t n2);
-float ***alloc3float(size_t n1, size_t n2, size_t n3);
-float ****alloc4float(size_t n1, size_t n2, size_t n3, size_t n4);
-float *****alloc5float(size_t n1, size_t n2, size_t n3, size_t n4, size_t n5);
-float ******alloc6float(size_t n1, size_t n2, size_t n3, size_t n4, size_t n5, size_t n6);
 void free1float(float *p);
 void free2float(float **p);
-void free3float(float ***p);
-void free4float(float ****p);
-void free5float(float *****p);
-void free6float(float ******p);
 
 double *alloc1double(size_t n1);
 double *realloc1double(double *v, size_t n1);
 double **alloc2double(size_t n1, size_t n2);
-double ***alloc3double(size_t n1, size_t n2, size_t n3);
 void free1double(double *p);
 void free2double(double **p);
-void free3double(double ***p);
 
 cpx *alloc1complexf(size_t n1);
 cpx *realloc1complexf(cpx *v, size_t n1);
 cpx **alloc2complexf(size_t n1, size_t n2);
-cpx ***alloc3complexf(size_t n1, size_t n2, size_t n3);
-cpx ****alloc4complexf(size_t n1, size_t n2, size_t n3, size_t n4);
 void free1complexf(cpx *p);
 void free2complexf(cpx **p);
-void free3complexf(cpx ***p);
-void free4complexf(cpx ****p);
 
 zpx *alloc1complex(size_t n1);
 zpx *realloc1complex(zpx *v, size_t n1);
 zpx **alloc2complex(size_t n1, size_t n2);
-zpx ***alloc3complex(size_t n1, size_t n2, size_t n3);
-zpx ****alloc4complex(size_t n1, size_t n2, size_t n3, size_t n4);
 void free1complex(zpx *p);
 void free2complex(zpx **p);
-void free3complex(zpx ***p);
-void free4complex(zpx ****p);
 
 char *alloc1char(size_t n1);
 char *realloc1char(char *v, size_t n1);
