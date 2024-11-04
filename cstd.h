@@ -66,6 +66,7 @@ typedef float cpx[2];
 typedef double zpx[2];
 /* interface of optimization algorithm*/
 typedef float (*opt_fg)(float *x, float *g);
+
 /* allocate and free multi-dimensional arrays */
 void *alloc1(size_t n1, size_t size);
 void *realloc1(void *v, size_t n1, size_t size);
@@ -139,34 +140,6 @@ void free4complex(zpx ****p);
 char *alloc1char(size_t n1);
 char *realloc1char(char *v, size_t n1);
 void free1char(char *p);
-/* getpar parameter parsing */
-void initargs(int argc, char **argv);
-bool getparbool(char *name, bool *p);
-int getparint(char *name, int *p);
-int getparuint(char *name, unsigned int *p);
-int getparshort(char *name, short *p);
-int getparushort(char *name, unsigned short *p);
-int getparlong(char *name, long *p);
-int getparulong(char *name, unsigned long *p);
-int getparfloat(char *name, float *p);
-int getpardouble(char *name, double *p);
-int getparstring(char *name, char **p);
-int getparstringarray(char *name, char **p);
-int getnparint(int n, char *name, int *p);
-int getnparuint(int n, char *name, unsigned int *p);
-int getnparshort(int n, char *name, short *p);
-int getnparushort(int n, char *name, unsigned short *p);
-int getnparlong(int n, char *name, long *p);
-int getnparulong(int n, char *name, unsigned long *p);
-int getnparfloat(int n, char *name, float *p);
-int getnpardouble(int n, char *name, double *p);
-int getnparstring(int n, char *name, char **p);
-int getnparstringarray(int n, char *name, char **p);
-int getnpar(int n, char *name, char *type, void *ptr);
-int countparname(char *name);
-int countparval(char *name);
-int countnparval(int n, char *name);
-void checkpars(void);
 
 /* string to numeric conversion with error checking */
 short eatoh(char *s);
@@ -190,9 +163,6 @@ double eatod(char *s);
 
 void err(char *fmt, ...);
 void warn(char *fmt, ...);
-
-/* Claerbout's box-triangle smoothing adapted for 2D */
-void triangle_smoothing(float **mod, int n1, int n2, int r1, int r2, int repeat);
 
 /* pading for 2D model */
 void pad2(const float *x, float *xx, const int nz, const int nx, const int lft, const int rht, const int top, const int bot);
@@ -223,5 +193,24 @@ typedef struct HashTable
 HashTable hash_creat(int size);
 void hash_add(HashTable table, char *s /* key=value */);
 void hash_close(HashTable tab);
+/*init function*/
+void init(int argc, char **argv);
+bool getint(const char *key, int *n);
+bool getfloat(const char *key, float *n);
+bool getdouble(const char *key, double *n);
+bool getstring(const char *key, char **n);
+bool getbool(const char *key, bool *n);
 
+/* file struct */
+typedef struct file
+{
+    char *headname, *dataname;
+    FILE *head, *data;
+    bool write;
+    HashTable tb;
+} *file;
+
+file input(const char *tag);
+file output(const char *tag);
+static void file_close(file f);
 #endif

@@ -595,708 +595,6 @@ void free1char(char *p)
     free1(p);
 }
 
-/*
-initargs 	        Makes command line args available to subroutines (re-entrant).
-                    Every par program starts with this call!
-getparbool		    get bool
-getparint		    get integers
-getparuint		    get unsigned integers
-getparshort		    get short integers
-getparushort		get unsigned short integers
-getparlong		    get long integers
-getparulong		    get unsigned long integers
-getparfloat		    get float
-getpardouble		get double
-getparstring		get a single string
-getparstringarray	get string array (fields delimited by commas)
-getpar			    get parameter by type
-getnparint		    get n'th occurrence of integer
-getnparuint		    get n'th occurrence of unsigned int
-getnparshort		get n'th occurrence of short integer
-getnparushort		get n'th occurrence of unsigned short int
-getnparlong		    get n'th occurrence of long integer
-getnparulong		get n'th occurrence of unsigned long int
-getnparfloat		get n'th occurrence of float
-getnpardouble		get n'th occurrence of double
-getnparstring		get n'th occurrence of string
-getnparstringarray	get n'th occurrence of string array
-getnpar			    get n'th occurrence by type
-countparname		return the number of times a parameter names is used
-countparval		    return the number of values in the last occurrence
-                    of a parameter
-countnparval		return the number of values in the n'th occurrence
-                    of a parameter
-getPar			    Promax compatible version of getpar
-checkpars()		    check the argument list for typos
-******************************************************************************
-Notes:
-Here are some usage examples:
-
-    ... if integer n not specified, then default to zero.
-    if (!getparint("n", &n)) n = 0;
-
-    ... if array of floats vx is specified, then
-    if (nx=countparval("vx")) {
-        ... allocate space for array
-        vx = alloc1float(nx);
-        ... and get the floats
-        getparfloat("vx",vx);
-    }
-
-The command line for the above examples might look like:
-    progname n=35 vx=3.21,4,9.5
-    Every par program starts with this call!
-
-More examples are provided in the DTEST code at the end of this file.
-
-The functions: eatoh, eatou, eatol, eatov, eatoi, eatop used
-below are versions of atoi that check for overflow.  The source
-file for these functions is atopkge.c.
-
-******************************************************************************
-*/
-/* parameter table */
-typedef struct
-{
-    char *name;     /* external name of parameter	*/
-    char *asciival; /* ascii value of parameter	*/
-} pointer_table;
-/* global variables declared and used internally */
-static pointer_table *argtbl; /* parameter table		*/
-static int nargs;             /* number of args that parse	*/
-static int tabled = false;    /* true when parameters tabled 	*/
-static size_t targc;          /* total number of args		*/
-static char **targv;          /* pointer to arg strings	*/
-static char *argstr;          /* storage for command line	*/
-/* functions declared and used internally */
-static int getparindex(int n, char *name);
-static void getparinit(void);
-static void tabulate(size_t argc, char **argv);
-static char *getpfname(void);
-static int ccount(char c, char *s);
-/*--------------------------------------------------------------------*\
-  These variables are used by checkpars() to warn of parameter typos.
-  par= does not use getpar() so we need to store that as the first
-  parameter name.  lheaders= is buried in fgettr() so we intialize
-  that also
-  \*--------------------------------------------------------------------*/
-#define PAR_NAMES_MAX 512
-
-static char *par_names[PAR_NAMES_MAX];
-static int par_count = 0;
-static int parcheck = 0;
-
-int xargc;
-char **xargv;
-/* make command line args available to subroutines -- re-entrant version */
-void initargs(int argc, char **argv)
-{
-    memset(par_names, 0, sizeof(par_names));
-    par_names[0] = "par";
-    par_names[1] = "lheader";
-    par_count = 2;
-
-    xargc = argc;
-    xargv = argv;
-    if (tabled == true)
-    {
-        free(argstr);
-        free(targv);
-        free(argtbl);
-    }
-    tabled = false;
-    return;
-}
-void strchop(char *s, char *t)
-/***********************************************************************
-strchop - chop off the tail end of a string "s" after a "," returning
-      the front part of "s" as "t".
-      ************************************************************************
-Notes:
-Based on strcpy in Kernighan and Ritchie's C [ANSI C] book, p. 106.
-************************************************************************
-Author: CWP: John Stockwell and Jack K. Cohen, July 1995
-***********************************************************************/
-{
-
-    while ((*s != ',') && (*s != '\0'))
-    {
-        *t++ = *s++;
-    }
-    *t = '\0';
-}
-
-/* functions to get values for the last occurrence of a parameter name */
-bool getparbool(char *name, bool *ptr)
-{
-    return getnpar(0, name, "b", ptr);
-}
-int getparint(char *name, int *ptr)
-{
-    return getnpar(0, name, "i", ptr);
-}
-int getparuint(char *name, unsigned int *ptr)
-{
-    return getnpar(0, name, "p", ptr);
-}
-int getparshort(char *name, short *ptr)
-{
-    return getnpar(0, name, "h", ptr);
-}
-int getparushort(char *name, unsigned short *ptr)
-{
-    return getnpar(0, name, "u", ptr);
-}
-int getparlong(char *name, long *ptr)
-{
-    return getnpar(0, name, "l", ptr);
-}
-int getparulong(char *name, unsigned long *ptr)
-{
-    return getnpar(0, name, "v", ptr);
-}
-int getparfloat(char *name, float *ptr)
-{
-    return getnpar(0, name, "f", ptr);
-}
-int getpardouble(char *name, double *ptr)
-{
-    return getnpar(0, name, "d", ptr);
-}
-int getparstring(char *name, char **ptr)
-{
-    return getnpar(0, name, "s", ptr);
-}
-int getparstringarray(char *name, char **ptr)
-{
-    return getnpar(0, name, "a", ptr);
-}
-int getpar(char *name, char *type, void *ptr)
-{
-    return getnpar(0, name, type, ptr);
-}
-
-/* functions to get values for the n'th occurrence of a parameter name */
-int getnparint(int n, char *name, int *ptr)
-{
-    return getnpar(n, name, "i", ptr);
-}
-int getnparuint(int n, char *name, unsigned int *ptr)
-{
-    return getnpar(n, name, "p", ptr);
-}
-int getnparshort(int n, char *name, short *ptr)
-{
-    return getnpar(n, name, "h", ptr);
-}
-int getnparushort(int n, char *name, unsigned short *ptr)
-{
-    return getnpar(n, name, "u", ptr);
-}
-int getnparlong(int n, char *name, long *ptr)
-{
-    return getnpar(n, name, "l", ptr);
-}
-int getnparulong(int n, char *name, unsigned long *ptr)
-{
-    return getnpar(n, name, "v", ptr);
-}
-int getnparfloat(int n, char *name, float *ptr)
-{
-    return getnpar(n, name, "f", ptr);
-}
-int getnpardouble(int n, char *name, double *ptr)
-{
-    return getnpar(n, name, "d", ptr);
-}
-int getnparstring(int n, char *name, char **ptr)
-{
-    return getnpar(n, name, "s", ptr);
-}
-int getnparstringarray(int n, char *name, char **ptr)
-{
-    return getnpar(n, name, "a", ptr);
-}
-int getnpar(int n, char *name, char *type, void *ptr)
-{
-    int i;      /* index of name in symbol table	*/
-    int j;      /* index for par_names[]		*/
-    int nval;   /* number of parameter values found	*/
-    char *aval; /* ascii field of symbol		*/
-
-    /*--------------------------------------------------------------------*\
-      getpar gets called in loops reading traces in some programs.  So
-      check for having seen this name before. Also make sure we don't
-      walk off the end of the table.
-      \*--------------------------------------------------------------------*/
-
-    if (parcheck && strcmp("lheader", name))
-    {
-        fprintf(stderr, "getpar() call after checkpars(): %s\n", name);
-    }
-
-    for (j = 0; j < par_count; j++)
-    {
-        if (!strcmp(par_names[j], name))
-        {
-            break;
-        }
-    }
-
-    if (j >= par_count && par_count < PAR_NAMES_MAX)
-    {
-        par_names[par_count++] = name;
-    }
-
-    if (par_count == PAR_NAMES_MAX)
-    {
-        fprintf(stderr, " %s exceeded PAR_NAMES_MAX %d \n", xargv[0], PAR_NAMES_MAX);
-    }
-
-    if (xargc == 1)
-        return 0;
-    if (!tabled)
-        getparinit();         /* Tabulate command line and parfile */
-    i = getparindex(n, name); /* Get parameter index */
-    if (i < 0)
-        return 0; /* Not there */
-
-    if (0 == ptr)
-    {
-        fprintf(stderr, "%s: getnpar called with 0 pointer, type = %s\n", __FILE__, type);
-    }
-
-    /*
-     * handle string type as a special case, since a string
-     * may contain commas.
-     */
-    if (type[0] == 's')
-    {
-        *((char **)ptr) = argtbl[i].asciival;
-        return 1;
-    }
-
-    /* convert vector of ascii values to numeric values */
-    for (nval = 0, aval = argtbl[i].asciival; *aval; nval++)
-    {
-        switch (type[0])
-        {
-        case 'b':
-            *(bool *)ptr = eatob(aval);
-            ptr = (bool *)ptr + 1;
-            break;
-        case 'i':
-            *(int *)ptr = eatoi(aval);
-            ptr = (int *)ptr + 1;
-            break;
-        case 'p':
-            *(unsigned int *)ptr = eatop(aval);
-            ptr = (unsigned int *)ptr + 1;
-            break;
-        case 'h':
-            *(short *)ptr = eatoh(aval);
-            ptr = (short *)ptr + 1;
-            break;
-        case 'u':
-            *(unsigned short *)ptr = eatou(aval);
-            ptr = (unsigned short *)ptr + 1;
-            break;
-        case 'l':
-            *(long *)ptr = eatol(aval);
-            ptr = (long *)ptr + 1;
-            break;
-        case 'v':
-            *(unsigned long *)ptr = eatov(aval);
-            ptr = (unsigned long *)ptr + 1;
-            break;
-        case 'f':
-            *(float *)ptr = eatof(aval);
-            ptr = (float *)ptr + 1;
-            break;
-        case 'd':
-            *(double *)ptr = eatod(aval);
-            ptr = (double *)ptr + 1;
-            break;
-        case 'a':
-        {
-            char *tmpstr = "";
-            tmpstr = alloc1(strlen(aval) + 1, 1);
-
-            strchop(aval, tmpstr);
-            *(char **)ptr = tmpstr;
-            ptr = (char **)ptr + 1;
-        }
-        break;
-        default:
-            fprintf(stderr, "%s: invalid parameter type = %s",
-                    __FILE__, type);
-        }
-        while (*aval++ != ',')
-        {
-            if (!*aval)
-                break;
-        }
-    }
-    return nval;
-}
-
-void checkpars(void)
-{
-
-    int i;
-    int j;
-    char buf[256];
-
-    if (getparint("verbose", &i) && i == 1)
-    {
-
-#ifdef SUXDR
-        fprintf(stderr, "Using Big Endian SU data format w/ XDR.\n");
-#else
-        fprintf(stderr, "Using native byte order SU data format w/o XDR.\n");
-#endif
-    }
-
-    for (j = 1; j < xargc; j++)
-    {
-
-        for (i = 0; i < par_count; i++)
-        {
-            sprintf(buf, "%s=", par_names[i]);
-
-            if (!strncmp(buf, xargv[j], strlen(buf)))
-            {
-                break;
-            }
-        }
-        if (i == par_count && strchr(xargv[j], '='))
-        {
-            fprintf(stderr, "Unknown %s argument %s\n", xargv[0], xargv[j]);
-        }
-    }
-
-    parcheck = 1;
-}
-
-/* return number of occurrences of parameter name */
-int countparname(char *name)
-{
-    int i, nname;
-
-    if (xargc == 1)
-        return 0;
-    if (!tabled)
-        getparinit();
-    for (i = 0, nname = 0; i < nargs; ++i)
-        if (!strcmp(name, argtbl[i].name))
-            ++nname;
-    return nname;
-}
-
-/* return number of values in n'th occurrence of parameter name */
-int countnparval(int n, char *name)
-{
-    int i;
-
-    if (xargc == 1)
-        return 0;
-    if (!tabled)
-        getparinit();
-    i = getparindex(n, name);
-    if (i >= 0)
-        return ccount(',', argtbl[i].asciival) + 1;
-    else
-        return 0;
-}
-
-/* return number of values in last occurrence of parameter name */
-int countparval(char *name)
-{
-    return countnparval(0, name);
-}
-
-/*
- * Return the index of the n'th occurrence of a parameter name,
- * except if n==0, return the index of the last occurrence.
- * Return -1 if the specified occurrence does not exist.
- */
-static int getparindex(int n, char *name)
-{
-    int i;
-    if (n == 0)
-    {
-        for (i = nargs - 1; i >= 0; --i)
-            if (!strcmp(name, argtbl[i].name))
-                break;
-        return i;
-    }
-    else
-    {
-        for (i = 0; i < nargs; ++i)
-            if (!strcmp(name, argtbl[i].name))
-                if (--n == 0)
-                    break;
-        if (i < nargs)
-            return i;
-        else
-            return -1;
-    }
-}
-
-/* Initialize getpar */
-static void getparinit(void)
-{
-    static char *pfname; /* name of parameter file		*/
-    FILE *pffd = NULL;   /* file id of parameter file		*/
-    int pflen;           /* length of parameter file in bytes	*/
-    int parfile;         /* parfile existence flag		*/
-    int argstrlen = 0;
-    char *pargstr; /* storage for parameter file args	*/
-    int nread = 0; /* bytes fread				*/
-    int i, j;      /* counters				*/
-    int start = true;
-    int debug = false;
-    int valencete = false;
-
-    tabled = true; /* remember table is built		*/
-
-    /* Check if xargc was initiated */
-
-    if (!xargc)
-        fprintf(stderr, "%s: xargc=%d -- not initiated in main\n", __FILE__, xargc);
-
-    /* Space needed for command lines */
-
-    for (i = 1, argstrlen = 0; i < xargc; i++)
-    {
-        argstrlen += strlen(xargv[i]) + 1;
-    }
-
-    /* Get parfile name if there is one */
-
-    if ((pfname = getpfname()))
-    {
-        parfile = true;
-    }
-    else
-    {
-        parfile = false;
-    }
-
-    if (parfile)
-    {
-        pffd = fopen(pfname, "r");
-
-        /* Get the length */
-        fseek(pffd, 0, SEEK_END);
-
-        pflen = ftell(pffd);
-
-        rewind(pffd);
-        argstrlen += pflen;
-    }
-    else
-    {
-        pflen = 0;
-    }
-
-    /*--------------------------------------------------------------------*\
-      Allocate space for command line and parameter file. The pointer
-      table could be as large as the string buffer, but no larger.
-
-      The parser logic has been completely rewritten to prevent bad
-      input from crashing the program.
-
-      Reginald H. Beardsley			    rhb@acm.org
-      \*--------------------------------------------------------------------*/
-
-    argstr = (char *)alloc1(argstrlen + 1, 1);
-    targv = (char **)alloc1((argstrlen + 1) / 4, sizeof(char *));
-
-    if (parfile)
-    {
-        /* Read the parfile */
-
-        nread = fread(argstr, 1, pflen, pffd);
-        if (nread != pflen)
-        {
-            fprintf(stderr, "%s: fread only %d bytes out of %d from %s\n",
-                    __FILE__, nread, pflen, pfname);
-        }
-        fclose(pffd);
-    }
-
-    /* force input to valid 7 bit ASCII */
-
-    for (i = 0; i < nread; i++)
-    {
-        argstr[i] &= 0x7F;
-    }
-
-    /* tokenize the input */
-
-    j = 0;
-
-    for (i = 0; i < nread; i++)
-    {
-
-        /* look for start of token */
-
-        if (start)
-        {
-
-            /* getpars.c:475: warning: subscript has type `char' */
-            if (isgraph((int)argstr[i]))
-            {
-                targv[j] = &(argstr[i]);
-                start = !start;
-                j++;
-            }
-            else
-            {
-                argstr[i] = 0;
-            }
-
-            /* terminate token */
-
-            /* getpars.c:487: warning: subscript has type `char' */
-        }
-        else if (!valencete && isspace((int)argstr[i]))
-        {
-            argstr[i] = 0;
-            start = !start;
-        }
-
-        /* toggle valencete semaphore */
-
-        if (argstr[i] == '\'' || argstr[i] == '\"')
-        {
-            valencete = !valencete;
-        }
-    }
-
-    /* display all tokens */
-
-    if (debug)
-    {
-
-        i = 0;
-        while (i < j && targv[i] != 0)
-        {
-            if (strlen(targv[i]))
-            {
-                fprintf(stderr, "%d -> %s\n", i, targv[i]);
-            }
-            i++;
-        }
-    }
-
-    /* discard non-parameter tokens */
-
-    i = 0;
-    targc = 0;
-    while (i < j && targv[i] != 0)
-    {
-        if (strchr(targv[i], '='))
-        {
-            targv[targc] = targv[i];
-            targc++;
-        }
-        i++;
-    }
-
-    /* Copy command line arguments */
-
-    for (j = 1, pargstr = argstr + pflen + 1; j < xargc; j++)
-    {
-        strcpy(pargstr, xargv[j]);
-        targv[targc++] = pargstr;
-        pargstr += strlen(xargv[j]) + 1;
-    }
-
-    /* Allocate space for the pointer table */
-
-    argtbl = (pointer_table *)alloc1(targc, sizeof(pointer_table));
-
-    /* Tabulate targv */
-
-    tabulate(targc, targv);
-
-    return;
-}
-#define PFNAME "par="
-/* Get name of parameter file */
-static char *getpfname(void)
-{
-    int i;
-    size_t pfnamelen;
-
-    pfnamelen = strlen(PFNAME);
-    for (i = xargc - 1; i > 0; i--)
-    {
-        if (!strncmp(PFNAME, xargv[i], pfnamelen) && strlen(xargv[i]) != pfnamelen)
-        {
-            return xargv[i] + pfnamelen;
-        }
-    }
-    return NULL;
-}
-
-#define iswhite(c) ((c) == ' ' || (c) == '\t' || (c) == '\n')
-
-/* Install symbol table */
-static void tabulate(size_t argc, char **argv)
-{
-    int i;
-    char *eqptr;
-    int debug = false;
-
-    for (i = 0, nargs = 0; i < argc; i++)
-    {
-        eqptr = strchr(argv[i], '=');
-        if (eqptr)
-        {
-            argtbl[nargs].name = argv[i];
-            argtbl[nargs].asciival = eqptr + 1;
-            *eqptr = (char)0;
-
-            /* Debugging dump */
-            if (debug)
-            {
-                fprintf(stderr,
-                        "argtbl[%d]: name=%s asciival=%s\n",
-                        nargs, argtbl[nargs].name, argtbl[nargs].asciival);
-            }
-            nargs++;
-        }
-    }
-    return;
-}
-
-/* Count characters in a string */
-static int ccount(char c, char *s)
-{
-    int i, count;
-    for (i = 0, count = 0; s[i] != 0; i++)
-        if (s[i] == c)
-            count++;
-    return count;
-}
-/* eatoh - convert string s to bool {true:false} */
-bool eatob(char *s)
-{
-    bool b = false;
-    char *p[] = {"YES", "yes", "Y", "y"};
-    for (int i = 0; i < 4; i++)
-    {
-        if (strcmp(p[i], s) == 0)
-        {
-            b = true;
-            break;
-        }
-    }
-    return b;
-}
 /* eatoh - convert string s to short integer {SHRT_MIN:SHRT_MAX} */
 short eatoh(char *s)
 {
@@ -1344,53 +642,6 @@ double eatod(char *s)
 {
     double x = strtod(s, NULL);
     return x;
-}
-
-/* Copyright (c) Colorado School of Mines, 2011.*/
-/* All rights reserved.                       */
-/* errpkge.c
-   err	 print warning on application program error and die
-   warn print warning on application program error
-   Examples:
-   err("Cannot divide %f by %f", x, y);
-   warn("fmax = %f exceeds half nyquist= %f", fmax, 0.25/dt);
-
-   if (NULL == (fp = fopen(xargv[1], "r")))
-   err("can't open %s", xargv[1]);
-   ...
-   if (-1 == close(fd))
-   err("close failed");
-*/
-void err(char *fmt, ...)
-{
-    va_list args;
-
-    if (EOF == fflush(stdout))
-    {
-        fprintf(stderr, "\nerr: fflush failed on stdout");
-    }
-    fprintf(stderr, "\n%s: ", xargv[0]);
-    va_start(args, fmt);
-    vfprintf(stderr, fmt, args);
-    va_end(args);
-    fprintf(stderr, "\n");
-    exit(EXIT_FAILURE);
-}
-
-void warn(char *fmt, ...)
-{
-    va_list args;
-
-    if (EOF == fflush(stdout))
-    {
-        fprintf(stderr, "\nwarn: fflush failed on stdout");
-    }
-    fprintf(stderr, "\n%s: ", xargv[0]);
-    va_start(args, fmt);
-    vfprintf(stderr, fmt, args);
-    va_end(args);
-    fprintf(stderr, "\n");
-    return;
 }
 
 /* pading for 2D model */
@@ -1498,6 +749,7 @@ static HashNode hash_find(HashTable table, char *key)
 {
     int h = hash(key, table->size);
     HashNode node = table->table[h];
+    exit;
     while (node != NULL)
     {
         if (strcmp(node->key, key) == 0)
@@ -1530,7 +782,6 @@ void hash_add(HashTable table, char *s /* key=value */)
     key = alloc1char(leftLen);
     strncpy(key, s, leftLen);
     key[leftLen] = '\0';
-
     HashNode e = hash_find(table, key);
     if (e != NULL)
     {
@@ -1550,7 +801,7 @@ void hash_add(HashTable table, char *s /* key=value */)
         node_creat(table, key, value);
     }
 }
-void hash_close(HashTable tab)
+static void hash_close(HashTable tab)
 {
     int n = tab->size;
     HashNode e, nt;
@@ -1568,4 +819,176 @@ void hash_close(HashTable tab)
     }
     free(tab->table);
     free(tab);
+}
+
+/* ========================================init function========================================================== */
+static char *program;
+static HashTable tb;
+void init(int argc, char **argv)
+{
+    program = argv[0];
+    tb = hash_creat(argc);
+    for (int i = 1; i < argc; i++)
+    {
+        hash_add(tb, argv[i]);
+    }
+}
+bool getint(const char *key, int *n)
+{
+    HashNode e = hash_find(tb, key);
+    if (e == NULL)
+        return false;
+    *n = eatoi(e->value);
+    return true;
+}
+bool getfloat(const char *key, float *n)
+{
+    HashNode e = hash_find(tb, key);
+    if (e == NULL)
+        return false;
+    *n = eatof(e->value);
+    return true;
+}
+bool getdouble(const char *key, double *n)
+{
+    HashNode e = hash_find(tb, key);
+    if (e == NULL)
+        return false;
+    *n = eatod(e->value);
+    return true;
+}
+bool getstring(const char *key, char **n)
+{
+    HashNode e = hash_find(tb, key);
+    if (e == NULL)
+        return false;
+    *n = strdup(e->value);
+    return true;
+}
+bool getbool(const char *key, bool *n)
+{
+    HashNode e = hash_find(tb, key);
+    *n = false;
+    if (e == NULL)
+        return false;
+    if (strcmp(e->value, "y") == 0 || strcmp(e->value, "Y") == 0)
+    {
+        *n = true;
+    }
+    return true;
+}
+/* Copyright (c) Colorado School of Mines, 2011.*/
+/* All rights reserved.                       */
+/* errpkge.c
+   err	 print warning on application program error and die
+   warn print warning on application program error
+   Examples:
+   err("Cannot divide %f by %f", x, y);
+   warn("fmax = %f exceeds half nyquist= %f", fmax, 0.25/dt);
+
+   if (NULL == (fp = fopen(xargv[1], "r")))
+   err("can't open %s", xargv[1]);
+   ...
+   if (-1 == close(fd))
+   err("close failed");
+*/
+void err(char *fmt, ...)
+{
+    va_list args;
+
+    if (EOF == fflush(stdout))
+    {
+        fprintf(stderr, "\nerr: fflush failed on stdout");
+    }
+    fprintf(stderr, "\n%s: ", program);
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+    fprintf(stderr, "\n");
+    exit(EXIT_FAILURE);
+}
+
+void warn(char *fmt, ...)
+{
+    va_list args;
+
+    if (EOF == fflush(stdout))
+    {
+        fprintf(stderr, "\nwarn: fflush failed on stdout");
+    }
+    fprintf(stderr, "\n%s: ", program);
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+    fprintf(stderr, "\n");
+    return;
+}
+
+static int countfile = 0;
+static file files[20];
+file input(const char *tag)
+{
+    file f = alloc1(1, sizeof(struct file));
+    f->write = false;
+    f->tb = hash_creat(10);
+    char *headname, *dataname;
+    if (strcmp(tag, "in") == 0 || strcmp(tag, "input") == 0)
+    {
+        f->headname = NULL;
+        f->head = stdin;
+    }
+    else
+    {
+        if (getstring(tag, &headname))
+        {
+            f->headname = headname;
+        }
+        else
+        {
+            headname = strdup(tag);
+            f->headname = headname;
+        }
+        f->head = fopen(headname, "r");
+    }
+    char s[100];
+    while (!feof(f->head))
+    {
+    }
+}
+file output(const char *tag)
+{
+    file f = alloc1(1, sizeof(struct file));
+    f->write = true;
+}
+static void file_close(file f)
+{
+    if (f == NULL)
+        return;
+    if (f->dataname != NULL)
+    {
+        free(f->dataname);
+    }
+    if (f->headname != NULL)
+    {
+        free(f->headname);
+    }
+    if (f->head != NULL)
+    {
+        fclose(f->head);
+    }
+    if (f->data != NULL)
+    {
+        fclose(f->data);
+    }
+    if (f->tb != NULL)
+        hash_close(f->tb);
+    free(f);
+}
+void finalize()
+{
+    for (int i = 0; i < countfile; i++)
+    {
+        file_close(files[i]);
+    }
+    hash_close(tb);
 }
